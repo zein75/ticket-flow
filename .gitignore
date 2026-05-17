@@ -1,6 +1,9 @@
 # Local project planning
 PLAN.md
 
+# Local environment
+.env
+
 # Build results
 [Bb]in/
 [Oo]bj/
