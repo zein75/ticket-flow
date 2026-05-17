@@ -6,6 +6,11 @@ namespace TicketFlow.Domain.Entities;
 
 public sealed class Payment : Entity
 {
+    private Payment()
+    {
+        Amount = null!;
+    }
+
     public Payment(Guid id, Guid orderId, Money amount)
         : base(id)
     {

@@ -8,6 +8,10 @@ public sealed class Reservation : Entity
 {
     private readonly List<ReservationSeat> _seats = [];
 
+    private Reservation()
+    {
+    }
+
     public Reservation(Guid id, Guid userId, Guid sessionId, DateTime expiresAtUtc, IEnumerable<Guid> seatIds)
         : base(id)
     {

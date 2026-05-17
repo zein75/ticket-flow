@@ -8,6 +8,11 @@ public sealed class Order : Entity
 {
     private readonly List<Ticket> _tickets = [];
 
+    private Order()
+    {
+        TotalAmount = null!;
+    }
+
     public Order(Guid id, Guid userId, Guid sessionId, Guid reservationId, Money totalAmount)
         : base(id)
     {

@@ -5,6 +5,12 @@ namespace TicketFlow.Domain.Entities;
 
 public sealed class User : Entity
 {
+    private User()
+    {
+        Email = string.Empty;
+        PasswordHash = string.Empty;
+    }
+
     public User(Guid id, string email, string passwordHash, UserRole role)
         : base(id)
     {

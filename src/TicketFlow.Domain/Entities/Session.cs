@@ -5,6 +5,11 @@ namespace TicketFlow.Domain.Entities;
 
 public sealed class Session : Entity
 {
+    private Session()
+    {
+        Price = null!;
+    }
+
     public Session(Guid id, Guid eventId, Guid hallId, DateTime startsAtUtc, DateTime endsAtUtc, Money price)
         : base(id)
     {

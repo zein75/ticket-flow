@@ -2,6 +2,10 @@ namespace TicketFlow.Domain.Entities;
 
 public sealed class ReservationSeat
 {
+    private ReservationSeat()
+    {
+    }
+
     public ReservationSeat(Guid reservationId, Guid seatId)
     {
         ReservationId = reservationId == Guid.Empty

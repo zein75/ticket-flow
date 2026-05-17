@@ -2,6 +2,11 @@ namespace TicketFlow.Domain.ValueObjects;
 
 public sealed record Money
 {
+    private Money()
+    {
+        Currency = string.Empty;
+    }
+
     public Money(decimal amount, string currency)
     {
         if (amount < 0)

@@ -5,6 +5,11 @@ namespace TicketFlow.Domain.Entities;
 
 public sealed class Ticket : Entity
 {
+    private Ticket()
+    {
+        QrCodePayload = string.Empty;
+    }
+
     public Ticket(Guid id, Guid orderId, Guid sessionId, Guid seatId, string qrCodePayload)
         : base(id)
     {

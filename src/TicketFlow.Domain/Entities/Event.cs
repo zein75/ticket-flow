@@ -7,6 +7,12 @@ public sealed class Event : Entity
 {
     private readonly List<Session> _sessions = [];
 
+    private Event()
+    {
+        Title = string.Empty;
+        Description = string.Empty;
+    }
+
     public Event(Guid id, string title, string description, Guid organizerId)
         : base(id)
     {

@@ -1,0 +1,21 @@
+using Microsoft.EntityFrameworkCore;
+using TicketFlow.Application.Abstractions.Persistence;
+using TicketFlow.Domain.Entities;
+using TicketFlow.Domain.Enums;
+
+namespace TicketFlow.Infrastructure.Persistence.Repositories;
+
+internal sealed class ReservationRepository : Repository<Reservation>, IReservationRepository
+{
+    public ReservationRepository(TicketFlowDbContext dbContext)
+        : base(dbContext)
+    {
+    }
+
+    public async Task<IReadOnlyCollection<Reservation>> GetExpiredActiveAsync(DateTime utcNow, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.Reservations
+            .Where(reservation => reservation.Status == ReservationStatus.Active && reservation.ExpiresAtUtc <= utcNow)
+            .ToListAsync(cancellationToken);
+    }
+}

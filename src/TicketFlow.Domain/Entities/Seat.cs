@@ -4,6 +4,10 @@ namespace TicketFlow.Domain.Entities;
 
 public sealed class Seat : Entity
 {
+    private Seat()
+    {
+    }
+
     public Seat(Guid id, Guid hallId, int row, int number)
         : base(id)
     {

@@ -6,6 +6,11 @@ public sealed class Hall : Entity
 {
     private readonly List<Seat> _seats = [];
 
+    private Hall()
+    {
+        Name = string.Empty;
+    }
+
     public Hall(Guid id, string name, int rows, int seatsPerRow)
         : base(id)
     {
