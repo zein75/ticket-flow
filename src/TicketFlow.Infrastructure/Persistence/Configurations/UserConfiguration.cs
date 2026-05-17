@@ -27,5 +27,13 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .HasConversion<string>()
             .HasMaxLength(32)
             .IsRequired();
+
+        builder.HasMany(user => user.RefreshTokens)
+            .WithOne()
+            .HasForeignKey(token => token.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Navigation(user => user.RefreshTokens)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }

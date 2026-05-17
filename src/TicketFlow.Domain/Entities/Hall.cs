@@ -38,9 +38,9 @@ public sealed class Hall : Entity
 
     public string Name { get; private set; }
 
-    public int Rows { get; }
+    public int Rows { get; private set; }
 
-    public int SeatsPerRow { get; }
+    public int SeatsPerRow { get; private set; }
 
     public IReadOnlyCollection<Seat> Seats => _seats.AsReadOnly();
 

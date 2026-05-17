@@ -42,6 +42,11 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-ticketflow};Username=${POSTGRES_USER:-ticketflow};Password=${POSTGRES_PASSWORD:-ticketflow_password}
       ConnectionStrings__Redis: redis:6379
+      Auth__AccessTokenMinutes: ${AUTH_ACCESS_TOKEN_MINUTES:-15}
+      Auth__RefreshTokenDays: ${AUTH_REFRESH_TOKEN_DAYS:-30}
+      Jwt__Issuer: ${JWT_ISSUER:-TicketFlow}
+      Jwt__Audience: ${JWT_AUDIENCE:-TicketFlow.Api}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:-ticketflow-development-signing-key-change-me-64-characters}
     ports:
       - "${API_HTTP_PORT:-8080}:8080"
     depends_on:
@@ -60,6 +65,11 @@ services:
       DOTNET_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-ticketflow};Username=${POSTGRES_USER:-ticketflow};Password=${POSTGRES_PASSWORD:-ticketflow_password}
       ConnectionStrings__Redis: redis:6379
+      Auth__AccessTokenMinutes: ${AUTH_ACCESS_TOKEN_MINUTES:-15}
+      Auth__RefreshTokenDays: ${AUTH_REFRESH_TOKEN_DAYS:-30}
+      Jwt__Issuer: ${JWT_ISSUER:-TicketFlow}
+      Jwt__Audience: ${JWT_AUDIENCE:-TicketFlow.Api}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:-ticketflow-development-signing-key-change-me-64-characters}
     depends_on:
       postgres:
         condition: service_healthy

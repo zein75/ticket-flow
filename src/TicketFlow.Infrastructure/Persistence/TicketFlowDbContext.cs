@@ -12,6 +12,8 @@ public sealed class TicketFlowDbContext : DbContext
 
     public DbSet<User> Users => Set<User>();
 
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
     public DbSet<Event> Events => Set<Event>();
 
     public DbSet<Session> Sessions => Set<Session>();

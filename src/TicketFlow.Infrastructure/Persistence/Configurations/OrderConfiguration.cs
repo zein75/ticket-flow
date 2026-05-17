@@ -17,6 +17,21 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.HasIndex(order => order.ReservationId)
             .IsUnique();
 
+        builder.HasOne<User>()
+            .WithMany()
+            .HasForeignKey(order => order.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Session>()
+            .WithMany()
+            .HasForeignKey(order => order.SessionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Reservation>()
+            .WithMany()
+            .HasForeignKey(order => order.ReservationId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.Property(order => order.Status)
             .HasConversion<string>()
             .HasMaxLength(32)

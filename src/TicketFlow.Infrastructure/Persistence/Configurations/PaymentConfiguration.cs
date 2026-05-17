@@ -15,6 +15,11 @@ internal sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         builder.HasIndex(payment => payment.OrderId)
             .IsUnique();
 
+        builder.HasOne<Order>()
+            .WithMany()
+            .HasForeignKey(payment => payment.OrderId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         builder.Property(payment => payment.Status)
             .HasConversion<string>()
             .HasMaxLength(32)

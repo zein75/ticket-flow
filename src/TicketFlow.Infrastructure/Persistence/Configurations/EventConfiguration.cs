@@ -27,6 +27,11 @@ internal sealed class EventConfiguration : IEntityTypeConfiguration<Event>
 
         builder.HasIndex(ticketEvent => ticketEvent.OrganizerId);
 
+        builder.HasOne<User>()
+            .WithMany()
+            .HasForeignKey(ticketEvent => ticketEvent.OrganizerId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasMany(ticketEvent => ticketEvent.Sessions)
             .WithOne()
             .HasForeignKey(session => session.EventId)

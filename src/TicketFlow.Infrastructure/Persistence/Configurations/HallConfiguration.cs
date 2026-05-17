@@ -16,6 +16,12 @@ internal sealed class HallConfiguration : IEntityTypeConfiguration<Hall>
             .HasMaxLength(200)
             .IsRequired();
 
+        builder.Property(hall => hall.Rows)
+            .IsRequired();
+
+        builder.Property(hall => hall.SeatsPerRow)
+            .IsRequired();
+
         builder.HasMany(hall => hall.Seats)
             .WithOne()
             .HasForeignKey(seat => seat.HallId)

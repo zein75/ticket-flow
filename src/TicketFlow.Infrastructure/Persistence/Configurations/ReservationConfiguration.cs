@@ -18,6 +18,16 @@ internal sealed class ReservationConfiguration : IEntityTypeConfiguration<Reserv
         builder.HasIndex(reservation => new { reservation.Status, reservation.ExpiresAtUtc })
             .HasFilter($"\"Status\" = '{ReservationStatus.Active}'");
 
+        builder.HasOne<User>()
+            .WithMany()
+            .HasForeignKey(reservation => reservation.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Session>()
+            .WithMany()
+            .HasForeignKey(reservation => reservation.SessionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.Property(reservation => reservation.Status)
             .HasConversion<string>()
             .HasMaxLength(32)

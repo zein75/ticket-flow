@@ -13,6 +13,13 @@ internal sealed class UnitOfWork : IUnitOfWork
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        return _dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            return _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException exception)
+        {
+            throw new PersistenceConcurrencyException("A concurrency conflict occurred while saving changes.", exception);
+        }
     }
 }

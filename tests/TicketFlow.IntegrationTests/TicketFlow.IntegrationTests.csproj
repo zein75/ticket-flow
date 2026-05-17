@@ -18,4 +18,9 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\TicketFlow.Infrastructure\TicketFlow.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\TicketFlow.Domain\TicketFlow.Domain.csproj" />
+  </ItemGroup>
+
 </Project>

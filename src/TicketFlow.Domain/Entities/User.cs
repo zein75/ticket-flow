@@ -5,6 +5,8 @@ namespace TicketFlow.Domain.Entities;
 
 public sealed class User : Entity
 {
+    private readonly List<RefreshToken> _refreshTokens = [];
+
     private User()
     {
         Email = string.Empty;
@@ -29,7 +31,21 @@ public sealed class User : Entity
 
     public bool IsBlocked { get; private set; }
 
+    public IReadOnlyCollection<RefreshToken> RefreshTokens => _refreshTokens.AsReadOnly();
+
     public void Block() => IsBlocked = true;
 
     public void Unblock() => IsBlocked = false;
+
+    public void AddRefreshToken(RefreshToken refreshToken)
+    {
+        ArgumentNullException.ThrowIfNull(refreshToken);
+
+        if (refreshToken.UserId != Id)
+        {
+            throw new ArgumentException("Refresh token belongs to another user.", nameof(refreshToken));
+        }
+
+        _refreshTokens.Add(refreshToken);
+    }
 }

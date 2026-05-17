@@ -1,6 +1,27 @@
 @TicketFlow.Api_HostAddress = http://localhost:5187
 
-GET {{TicketFlow.Api_HostAddress}}/weatherforecast/
+POST {{TicketFlow.Api_HostAddress}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "Password123!"
+}
+
+###
+
+POST {{TicketFlow.Api_HostAddress}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "Password123!"
+}
+
+###
+
+GET {{TicketFlow.Api_HostAddress}}/api/v1/auth/me
+Authorization: Bearer {{access_token}}
 Accept: application/json
 
 ###

@@ -64,6 +64,12 @@ namespace TicketFlow.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<int>("Rows")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SeatsPerRow")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.ToTable("halls", (string)null);
@@ -129,6 +135,44 @@ namespace TicketFlow.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("payments", (string)null);
+                });
+
+            modelBuilder.Entity("TicketFlow.Domain.Entities.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ReplacedByTokenHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .IsConcurrencyToken()
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("refresh_tokens", (string)null);
                 });
 
             modelBuilder.Entity("TicketFlow.Domain.Entities.Reservation", b =>
@@ -257,6 +301,8 @@ namespace TicketFlow.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OrderId");
 
+                    b.HasIndex("SeatId");
+
                     b.HasIndex("SessionId", "SeatId")
                         .IsUnique();
 
@@ -295,8 +341,35 @@ namespace TicketFlow.Infrastructure.Persistence.Migrations
                     b.ToTable("users", (string)null);
                 });
 
+            modelBuilder.Entity("TicketFlow.Domain.Entities.Event", b =>
+                {
+                    b.HasOne("TicketFlow.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("TicketFlow.Domain.Entities.Order", b =>
                 {
+                    b.HasOne("TicketFlow.Domain.Entities.Reservation", null)
+                        .WithMany()
+                        .HasForeignKey("ReservationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TicketFlow.Domain.Entities.Session", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TicketFlow.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.OwnsOne("TicketFlow.Domain.ValueObjects.Money", "TotalAmount", b1 =>
                         {
                             b1.Property<Guid>("OrderId")
@@ -327,6 +400,12 @@ namespace TicketFlow.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("TicketFlow.Domain.Entities.Payment", b =>
                 {
+                    b.HasOne("TicketFlow.Domain.Entities.Order", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.OwnsOne("TicketFlow.Domain.ValueObjects.Money", "Amount", b1 =>
                         {
                             b1.Property<Guid>("PaymentId")
@@ -355,12 +434,42 @@ namespace TicketFlow.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("TicketFlow.Domain.Entities.RefreshToken", b =>
+                {
+                    b.HasOne("TicketFlow.Domain.Entities.User", null)
+                        .WithMany("RefreshTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TicketFlow.Domain.Entities.Reservation", b =>
+                {
+                    b.HasOne("TicketFlow.Domain.Entities.Session", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TicketFlow.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("TicketFlow.Domain.Entities.ReservationSeat", b =>
                 {
                     b.HasOne("TicketFlow.Domain.Entities.Reservation", null)
                         .WithMany("Seats")
                         .HasForeignKey("ReservationId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TicketFlow.Domain.Entities.Seat", null)
+                        .WithMany()
+                        .HasForeignKey("SeatId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
@@ -379,6 +488,12 @@ namespace TicketFlow.Infrastructure.Persistence.Migrations
                         .WithMany("Sessions")
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TicketFlow.Domain.Entities.Hall", null)
+                        .WithMany()
+                        .HasForeignKey("HallId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.OwnsOne("TicketFlow.Domain.ValueObjects.Money", "Price", b1 =>
@@ -416,6 +531,18 @@ namespace TicketFlow.Infrastructure.Persistence.Migrations
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("TicketFlow.Domain.Entities.Seat", null)
+                        .WithMany()
+                        .HasForeignKey("SeatId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TicketFlow.Domain.Entities.Session", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TicketFlow.Domain.Entities.Event", b =>
@@ -436,6 +563,11 @@ namespace TicketFlow.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("TicketFlow.Domain.Entities.Reservation", b =>
                 {
                     b.Navigation("Seats");
+                });
+
+            modelBuilder.Entity("TicketFlow.Domain.Entities.User", b =>
+                {
+                    b.Navigation("RefreshTokens");
                 });
 #pragma warning restore 612, 618
         }

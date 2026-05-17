@@ -15,6 +15,16 @@ internal sealed class SessionConfiguration : IEntityTypeConfiguration<Session>
         builder.HasIndex(session => session.EventId);
         builder.HasIndex(session => session.HallId);
 
+        builder.HasOne<Event>()
+            .WithMany(ticketEvent => ticketEvent.Sessions)
+            .HasForeignKey(session => session.EventId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne<Hall>()
+            .WithMany()
+            .HasForeignKey(session => session.HallId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.Property(session => session.StartsAtUtc)
             .IsRequired();
 

@@ -13,5 +13,10 @@ internal sealed class ReservationSeatConfiguration : IEntityTypeConfiguration<Re
         builder.HasKey(seat => new { seat.ReservationId, seat.SeatId });
 
         builder.HasIndex(seat => seat.SeatId);
+
+        builder.HasOne<Seat>()
+            .WithMany()
+            .HasForeignKey(seat => seat.SeatId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
