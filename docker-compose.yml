@@ -6,9 +6,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-ticketflow}
       POSTGRES_USER: ${POSTGRES_USER:-ticketflow}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ticketflow_password}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -21,8 +19,6 @@ services:
     image: redis:7
     container_name: ticketflow-redis
     restart: unless-stopped
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -40,13 +36,13 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-ticketflow};Username=${POSTGRES_USER:-ticketflow};Password=${POSTGRES_PASSWORD:-ticketflow_password}
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-ticketflow};Username=${POSTGRES_USER:-ticketflow};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       ConnectionStrings__Redis: redis:6379
       Auth__AccessTokenMinutes: ${AUTH_ACCESS_TOKEN_MINUTES:-15}
       Auth__RefreshTokenDays: ${AUTH_REFRESH_TOKEN_DAYS:-30}
       Jwt__Issuer: ${JWT_ISSUER:-TicketFlow}
       Jwt__Audience: ${JWT_AUDIENCE:-TicketFlow.Api}
-      Jwt__SigningKey: ${JWT_SIGNING_KEY:-ticketflow-development-signing-key-change-me-64-characters}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?JWT_SIGNING_KEY is required}
     ports:
       - "${API_HTTP_PORT:-8080}:8080"
     depends_on:
@@ -63,13 +59,13 @@ services:
     restart: unless-stopped
     environment:
       DOTNET_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
-      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-ticketflow};Username=${POSTGRES_USER:-ticketflow};Password=${POSTGRES_PASSWORD:-ticketflow_password}
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-ticketflow};Username=${POSTGRES_USER:-ticketflow};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       ConnectionStrings__Redis: redis:6379
       Auth__AccessTokenMinutes: ${AUTH_ACCESS_TOKEN_MINUTES:-15}
       Auth__RefreshTokenDays: ${AUTH_REFRESH_TOKEN_DAYS:-30}
       Jwt__Issuer: ${JWT_ISSUER:-TicketFlow}
       Jwt__Audience: ${JWT_AUDIENCE:-TicketFlow.Api}
-      Jwt__SigningKey: ${JWT_SIGNING_KEY:-ticketflow-development-signing-key-change-me-64-characters}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?JWT_SIGNING_KEY is required}
     depends_on:
       postgres:
         condition: service_healthy

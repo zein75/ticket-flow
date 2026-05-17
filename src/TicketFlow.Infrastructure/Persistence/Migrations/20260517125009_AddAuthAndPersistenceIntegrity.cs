@@ -16,14 +16,14 @@ namespace TicketFlow.Infrastructure.Persistence.Migrations
                 table: "halls",
                 type: "integer",
                 nullable: false,
-                defaultValue: 0);
+                defaultValue: 1);
 
             migrationBuilder.AddColumn<int>(
                 name: "SeatsPerRow",
                 table: "halls",
                 type: "integer",
                 nullable: false,
-                defaultValue: 0);
+                defaultValue: 1);
 
             migrationBuilder.CreateTable(
                 name: "refresh_tokens",

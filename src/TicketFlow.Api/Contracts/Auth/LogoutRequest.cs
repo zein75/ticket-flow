@@ -1,5 +1,6 @@
 namespace TicketFlow.Api.Contracts.Auth;
 
 public sealed record LogoutRequest(
-    [property: System.ComponentModel.DataAnnotations.Required]
+    [System.ComponentModel.DataAnnotations.Required]
+    [TicketFlow.Api.Validation.NotBlank]
     string RefreshToken);

@@ -51,7 +51,7 @@ public sealed class AuthService : IAuthService
         _users.Add(user);
 
         var result = IssueTokens(user);
-        user.AddRefreshToken(new RefreshToken(
+        AddRefreshToken(user, new RefreshToken(
             Guid.NewGuid(),
             user.Id,
             _refreshTokenGenerator.Hash(result.RefreshToken),
@@ -78,7 +78,7 @@ public sealed class AuthService : IAuthService
         }
 
         var result = IssueTokens(user);
-        user.AddRefreshToken(new RefreshToken(
+        AddRefreshToken(user, new RefreshToken(
             Guid.NewGuid(),
             user.Id,
             _refreshTokenGenerator.Hash(result.RefreshToken),
@@ -92,7 +92,7 @@ public sealed class AuthService : IAuthService
 
     public async Task<AuthResult> RefreshAsync(RefreshTokenCommand command, CancellationToken cancellationToken = default)
     {
-        var tokenHash = _refreshTokenGenerator.Hash(command.RefreshToken);
+        var tokenHash = HashRefreshToken(command.RefreshToken);
         var refreshToken = await _refreshTokens.GetByTokenHashAsync(tokenHash, cancellationToken)
             ?? throw AuthException.InvalidRefreshToken();
 
@@ -111,7 +111,7 @@ public sealed class AuthService : IAuthService
 
         var result = IssueTokens(user);
         refreshToken.Revoke(_clock.UtcNow, _refreshTokenGenerator.Hash(result.RefreshToken));
-        user.AddRefreshToken(new RefreshToken(
+        AddRefreshToken(user, new RefreshToken(
             Guid.NewGuid(),
             user.Id,
             _refreshTokenGenerator.Hash(result.RefreshToken),
@@ -132,7 +132,7 @@ public sealed class AuthService : IAuthService
 
     public async Task LogoutAsync(LogoutCommand command, CancellationToken cancellationToken = default)
     {
-        var tokenHash = _refreshTokenGenerator.Hash(command.RefreshToken);
+        var tokenHash = HashRefreshToken(command.RefreshToken);
         var refreshToken = await _refreshTokens.GetByTokenHashAsync(tokenHash, cancellationToken);
         if (refreshToken is null)
         {
@@ -166,5 +166,23 @@ public sealed class AuthService : IAuthService
         }
 
         return email.Trim().ToLowerInvariant();
+    }
+
+    private void AddRefreshToken(User user, RefreshToken refreshToken)
+    {
+        user.AddRefreshToken(refreshToken);
+        _refreshTokens.Add(refreshToken);
+    }
+
+    private string HashRefreshToken(string refreshToken)
+    {
+        try
+        {
+            return _refreshTokenGenerator.Hash(refreshToken);
+        }
+        catch (ArgumentException)
+        {
+            throw AuthException.InvalidRefreshToken();
+        }
     }
 }

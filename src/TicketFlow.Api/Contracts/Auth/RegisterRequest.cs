@@ -1,13 +1,16 @@
 using System.ComponentModel.DataAnnotations;
+using TicketFlow.Api.Validation;
 
 namespace TicketFlow.Api.Contracts.Auth;
 
 public sealed record RegisterRequest(
-    [property: Required]
-    [property: EmailAddress]
-    [property: MaxLength(320)]
+    [Required]
+    [EmailAddress]
+    [MaxLength(320)]
+    [NotBlank]
     string Email,
-    [property: Required]
-    [property: MinLength(8)]
-    [property: MaxLength(128)]
+    [Required]
+    [MinLength(8)]
+    [MaxLength(128)]
+    [NotBlank]
     string Password);

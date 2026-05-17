@@ -1,9 +1,11 @@
 namespace TicketFlow.Api.Contracts.Auth;
 
 public sealed record LoginRequest(
-    [property: System.ComponentModel.DataAnnotations.Required]
-    [property: System.ComponentModel.DataAnnotations.EmailAddress]
-    [property: System.ComponentModel.DataAnnotations.MaxLength(320)]
+    [System.ComponentModel.DataAnnotations.Required]
+    [System.ComponentModel.DataAnnotations.EmailAddress]
+    [System.ComponentModel.DataAnnotations.MaxLength(320)]
+    [TicketFlow.Api.Validation.NotBlank]
     string Email,
-    [property: System.ComponentModel.DataAnnotations.Required]
+    [System.ComponentModel.DataAnnotations.Required]
+    [TicketFlow.Api.Validation.NotBlank]
     string Password);
