@@ -70,6 +70,34 @@ public sealed class ReservationsApiTests
     }
 
     [Fact]
+    public async Task Create_ShouldAllowOnlyOneReservation_WhenTwoUsersReserveSameSeatConcurrently()
+    {
+        await using var app = new ReservationsApiFactory();
+        await app.SeedAsync();
+        var firstClient = app.CreateClient();
+        var secondClient = app.CreateClient();
+        await app.AuthorizeAsync(firstClient, "user@example.com");
+        await app.AuthorizeAsync(secondClient, "second-user@example.com");
+
+        var firstRequest = firstClient.PostAsJsonAsync("/api/v1/reservations", new
+        {
+            sessionId = app.SessionId,
+            seatIds = new[] { app.FirstSeatId }
+        });
+        var secondRequest = secondClient.PostAsJsonAsync("/api/v1/reservations", new
+        {
+            sessionId = app.SessionId,
+            seatIds = new[] { app.FirstSeatId }
+        });
+
+        var responses = await Task.WhenAll(firstRequest, secondRequest);
+        var statuses = responses.Select(response => response.StatusCode).Order().ToArray();
+
+        Assert.Equal([HttpStatusCode.Created, HttpStatusCode.Conflict], statuses);
+        Assert.Equal(1, await app.CountActiveReservationsAsync(app.FirstSeatId));
+    }
+
+    [Fact]
     public async Task Create_ShouldReturnConflict_WhenSeatIsAlreadyLockedInRedis()
     {
         var lockStore = new InMemorySeatLockStore();
@@ -77,7 +105,7 @@ public sealed class ReservationsApiTests
         await app.SeedAsync();
         await lockStore.TryLockSeatsAsync(app.SessionId, Guid.NewGuid(), [app.FirstSeatId], TimeSpan.FromMinutes(10));
         var client = app.CreateClient();
-        await app.AuthorizeAsync(client);
+        await app.AuthorizeAsync(client, "user@example.com");
 
         var response = await client.PostAsJsonAsync("/api/v1/reservations", new
         {
@@ -94,7 +122,7 @@ public sealed class ReservationsApiTests
         await using var app = new ReservationsApiFactory();
         await app.SeedAsync();
         var client = app.CreateClient();
-        await app.AuthorizeAsync(client);
+        await app.AuthorizeAsync(client, "user@example.com");
 
         var response = await client.PostAsJsonAsync("/api/v1/reservations", new
         {
@@ -111,7 +139,7 @@ public sealed class ReservationsApiTests
         await using var app = new ReservationsApiFactory();
         await app.SeedAsync();
         var client = app.CreateClient();
-        await app.AuthorizeAsync(client);
+        await app.AuthorizeAsync(client, "user@example.com");
 
         var reservationResponse = await client.PostAsJsonAsync("/api/v1/reservations", new
         {
@@ -166,6 +194,8 @@ public sealed class ReservationsApiTests
 
         public Guid UserId { get; } = Guid.NewGuid();
 
+        public Guid SecondUserId { get; } = Guid.NewGuid();
+
         public Guid OrganizerId { get; } = Guid.NewGuid();
 
         public Guid HallId { get; } = Guid.NewGuid();
@@ -187,6 +217,7 @@ public sealed class ReservationsApiTests
 
             dbContext.Users.AddRange(
                 new User(UserId, "user@example.com", HashPassword("Password123!"), UserRole.User),
+                new User(SecondUserId, "second-user@example.com", HashPassword("Password123!"), UserRole.User),
                 new User(OrganizerId, "organizer@example.com", HashPassword("Password123!"), UserRole.Organizer));
 
             var hall = new Hall(HallId, "Main hall", 1, 2);
@@ -213,15 +244,31 @@ public sealed class ReservationsApiTests
 
         public async Task AuthorizeAsync(HttpClient client)
         {
+            await AuthorizeAsync(client, "user@example.com");
+        }
+
+        public async Task AuthorizeAsync(HttpClient client, string email)
+        {
             var response = await client.PostAsJsonAsync("/api/v1/auth/login", new
             {
-                email = "user@example.com",
+                email,
                 password = "Password123!"
             });
             response.EnsureSuccessStatusCode();
             var payload = await response.Content.ReadFromJsonAsync<AuthPayload>();
             Assert.NotNull(payload);
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", payload.AccessToken);
+        }
+
+        public async Task<int> CountActiveReservationsAsync(Guid seatId)
+        {
+            using var scope = Services.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<TicketFlowDbContext>();
+
+            return await dbContext.Reservations
+                .CountAsync(reservation =>
+                    reservation.Status == ReservationStatus.Active &&
+                    reservation.Seats.Any(seat => seat.SeatId == seatId));
         }
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -279,6 +326,7 @@ public sealed class ReservationsApiTests
     private sealed class InMemorySeatLockStore : ISeatLockStore
     {
         private readonly ConcurrentDictionary<string, LockEntry> _locks = new(StringComparer.Ordinal);
+        private readonly object _gate = new();
 
         public Task<bool> TryLockSeatsAsync(
             Guid sessionId,
@@ -290,17 +338,20 @@ public sealed class ReservationsApiTests
             var expiresAtUtc = DateTime.UtcNow.Add(ttl);
             var keys = seatIds.Select(seatId => GetKey(sessionId, seatId)).ToArray();
 
-            foreach (var key in keys)
+            lock (_gate)
             {
-                if (_locks.TryGetValue(key, out var existingLock) && existingLock.ExpiresAtUtc > DateTime.UtcNow)
+                foreach (var key in keys)
                 {
-                    return Task.FromResult(false);
+                    if (_locks.TryGetValue(key, out var existingLock) && existingLock.ExpiresAtUtc > DateTime.UtcNow)
+                    {
+                        return Task.FromResult(false);
+                    }
                 }
-            }
 
-            foreach (var key in keys)
-            {
-                _locks[key] = new LockEntry(reservationId, expiresAtUtc);
+                foreach (var key in keys)
+                {
+                    _locks[key] = new LockEntry(reservationId, expiresAtUtc);
+                }
             }
 
             return Task.FromResult(true);
@@ -312,12 +363,15 @@ public sealed class ReservationsApiTests
             IReadOnlyCollection<Guid> seatIds,
             CancellationToken cancellationToken = default)
         {
-            foreach (var seatId in seatIds)
+            lock (_gate)
             {
-                var key = GetKey(sessionId, seatId);
-                if (_locks.TryGetValue(key, out var existingLock) && existingLock.ReservationId == reservationId)
+                foreach (var seatId in seatIds)
                 {
-                    _locks.TryRemove(key, out _);
+                    var key = GetKey(sessionId, seatId);
+                    if (_locks.TryGetValue(key, out var existingLock) && existingLock.ReservationId == reservationId)
+                    {
+                        _locks.TryRemove(key, out _);
+                    }
                 }
             }
 
