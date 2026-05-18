@@ -38,6 +38,16 @@ public sealed class Event : Entity
 
     public void Archive() => Status = EventStatus.Archived;
 
+    public void ChangeStatus(EventStatus status)
+    {
+        if (!Enum.IsDefined(status))
+        {
+            throw new ArgumentOutOfRangeException(nameof(status), "Event status is invalid.");
+        }
+
+        Status = status;
+    }
+
     public void Rename(string title, string description)
     {
         Title = string.IsNullOrWhiteSpace(title) ? throw new ArgumentException("Title is required.", nameof(title)) : title;

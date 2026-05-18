@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TicketFlow.Application.Features.Auth;
+using TicketFlow.Application.Features.Events;
 
 namespace TicketFlow.Application;
 
@@ -10,6 +11,7 @@ public static class DependencyInjection
     {
         services.Configure<AuthOptions>(configuration.GetSection(AuthOptions.SectionName));
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IEventManagementService, EventManagementService>();
 
         return services;
     }
