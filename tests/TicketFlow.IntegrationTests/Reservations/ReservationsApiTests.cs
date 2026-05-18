@@ -321,6 +321,24 @@ public sealed class ReservationsApiTests
         {
             return Task.CompletedTask;
         }
+
+        public Task SeatsReleasedAsync(
+            Guid sessionId,
+            Guid reservationId,
+            IReadOnlyCollection<Guid> seatIds,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task SeatsSoldAsync(
+            Guid sessionId,
+            Guid orderId,
+            IReadOnlyCollection<Guid> seatIds,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class InMemorySeatLockStore : ISeatLockStore

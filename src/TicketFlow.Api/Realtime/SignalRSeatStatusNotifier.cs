@@ -20,20 +20,38 @@ internal sealed class SignalRSeatStatusNotifier : ISeatStatusNotifier
         CancellationToken cancellationToken = default)
     {
         return _hubContext.Clients
-            .Group(GetSessionGroupName(sessionId))
+            .Group(SeatHub.GetSessionGroupName(sessionId))
             .SendAsync(
                 "SeatReserved",
-                new
-                {
-                    sessionId,
-                    reservationId,
-                    seatIds
-                },
+                new SeatReservedEvent(sessionId, reservationId, seatIds),
                 cancellationToken);
     }
 
-    private static string GetSessionGroupName(Guid sessionId)
+    public Task SeatsReleasedAsync(
+        Guid sessionId,
+        Guid reservationId,
+        IReadOnlyCollection<Guid> seatIds,
+        CancellationToken cancellationToken = default)
     {
-        return $"session:{sessionId}";
+        return _hubContext.Clients
+            .Group(SeatHub.GetSessionGroupName(sessionId))
+            .SendAsync(
+                "SeatReleased",
+                new SeatReleasedEvent(sessionId, reservationId, seatIds),
+                cancellationToken);
+    }
+
+    public Task SeatsSoldAsync(
+        Guid sessionId,
+        Guid orderId,
+        IReadOnlyCollection<Guid> seatIds,
+        CancellationToken cancellationToken = default)
+    {
+        return _hubContext.Clients
+            .Group(SeatHub.GetSessionGroupName(sessionId))
+            .SendAsync(
+                "SeatSold",
+                new SeatSoldEvent(sessionId, orderId, seatIds),
+                cancellationToken);
     }
 }
