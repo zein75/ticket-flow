@@ -3,7 +3,11 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using TicketFlow.Api.Auth;
+using TicketFlow.Api.Hubs;
+using TicketFlow.Api.Realtime;
+using TicketFlow.Api.Routing;
 using TicketFlow.Application;
+using TicketFlow.Application.Abstractions.Realtime;
 using TicketFlow.Infrastructure;
 using TicketFlow.Infrastructure.Auth;
 
@@ -13,8 +17,10 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+builder.Services.AddSignalR();
 builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddScoped<ISeatStatusNotifier, SignalRSeatStatusNotifier>();
 
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
     ?? throw new InvalidOperationException("JWT options are not configured.");
@@ -59,6 +65,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<SeatHub>(ApiRoutes.V1 + "/hubs/seats");
 
 app.Run();
 

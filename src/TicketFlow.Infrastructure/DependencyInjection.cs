@@ -1,13 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using StackExchange.Redis;
 using TicketFlow.Application.Abstractions.Auth;
 using TicketFlow.Application.Abstractions.Common;
 using TicketFlow.Application.Abstractions.Persistence;
+using TicketFlow.Application.Abstractions.Reservations;
 using TicketFlow.Infrastructure.Auth;
 using TicketFlow.Infrastructure.Common;
 using TicketFlow.Infrastructure.Persistence;
 using TicketFlow.Infrastructure.Persistence.Repositories;
+using TicketFlow.Infrastructure.Redis;
 
 namespace TicketFlow.Infrastructure;
 
@@ -23,14 +26,19 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString);
         });
 
+        var redisConnectionString = configuration.GetConnectionString("Redis")
+            ?? throw new InvalidOperationException("Connection string 'Redis' is not configured.");
+
         services.AddOptions<JwtOptions>()
             .Bind(configuration.GetSection(JwtOptions.SectionName))
             .ValidateOnStart();
         services.AddSingleton<Microsoft.Extensions.Options.IValidateOptions<JwtOptions>, JwtOptionsValidator>();
+        services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
         services.AddSingleton<IRefreshTokenGenerator, RefreshTokenGenerator>();
         services.AddSingleton<ITokenService, JwtTokenService>();
+        services.AddSingleton<ISeatLockStore, RedisSeatLockStore>();
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
