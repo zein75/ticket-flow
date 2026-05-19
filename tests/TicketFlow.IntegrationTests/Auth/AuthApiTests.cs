@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +9,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using TicketFlow.Application.Features.Auth;
 using TicketFlow.Infrastructure.Persistence;
 
 namespace TicketFlow.IntegrationTests.Auth;
@@ -74,6 +76,12 @@ public sealed class AuthApiTests
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("https://ticketflow/errors/validation", document.RootElement.GetProperty("type").GetString());
+        Assert.Equal("Validation failed.", document.RootElement.GetProperty("title").GetString());
+        Assert.True(document.RootElement.TryGetProperty("errors", out var errors));
+        Assert.True(errors.TryGetProperty("Password", out _));
+        Assert.True(document.RootElement.TryGetProperty("traceId", out _));
     }
 
     [Fact]
@@ -118,6 +126,25 @@ public sealed class AuthApiTests
         Assert.Equal(HttpStatusCode.Unauthorized, secondRefresh.StatusCode);
     }
 
+    [Fact]
+    public async Task UnhandledException_ShouldReturnProblemDetails()
+    {
+        await using var app = new ThrowingAuthApiFactory();
+        var client = app.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/v1/auth/login", new
+        {
+            email = "user@example.com",
+            password = "Password123!"
+        });
+
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("https://ticketflow/errors/internal-server-error", document.RootElement.GetProperty("type").GetString());
+        Assert.Equal("An unexpected error occurred.", document.RootElement.GetProperty("title").GetString());
+        Assert.True(document.RootElement.TryGetProperty("traceId", out _));
+    }
+
     private sealed record AuthPayload(
         Guid UserId,
         string Email,
@@ -127,7 +154,7 @@ public sealed class AuthApiTests
         DateTime AccessTokenExpiresAtUtc,
         DateTime RefreshTokenExpiresAtUtc);
 
-    private sealed class AuthApiFactory : WebApplicationFactory<Program>
+    private class AuthApiFactory : WebApplicationFactory<Program>
     {
         private readonly string _databaseName = $"ticketflow-auth-tests-{Guid.NewGuid()}";
 
@@ -150,5 +177,34 @@ public sealed class AuthApiTests
                 });
             });
         }
+    }
+
+    private sealed class ThrowingAuthApiFactory : AuthApiFactory
+    {
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            base.ConfigureWebHost(builder);
+
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<IAuthService>();
+                services.AddScoped<IAuthService, ThrowingAuthService>();
+            });
+        }
+    }
+
+    private sealed class ThrowingAuthService : IAuthService
+    {
+        public Task<AuthResult> RegisterAsync(RegisterCommand command, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("Synthetic auth failure.");
+
+        public Task<AuthResult> LoginAsync(LoginCommand command, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("Synthetic auth failure.");
+
+        public Task<AuthResult> RefreshAsync(RefreshTokenCommand command, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("Synthetic auth failure.");
+
+        public Task LogoutAsync(LogoutCommand command, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("Synthetic auth failure.");
     }
 }

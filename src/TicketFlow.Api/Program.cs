@@ -1,11 +1,15 @@
 using System.Security.Claims;
 using System.Text;
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using TicketFlow.Api.Auth;
 using TicketFlow.Api.Hubs;
+using TicketFlow.Api.Middleware;
 using TicketFlow.Api.Realtime;
 using TicketFlow.Api.Routing;
+using TicketFlow.Api.Validation;
 using TicketFlow.Application;
 using TicketFlow.Application.Abstractions.Realtime;
 using TicketFlow.Infrastructure;
@@ -15,7 +19,26 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<FluentValidationActionFilter>();
+});
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState
+            .Where(entry => entry.Value?.Errors.Count > 0)
+            .ToDictionary(
+                entry => entry.Key,
+                entry => entry.Value!.Errors.Select(error => error.ErrorMessage).ToArray(),
+                StringComparer.Ordinal);
+
+        return new BadRequestObjectResult(
+            FluentValidationActionFilter.CreateValidationProblemDetails(context, errors));
+    };
+});
+builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
 builder.Services.AddApplication(builder.Configuration);
@@ -64,6 +87,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
