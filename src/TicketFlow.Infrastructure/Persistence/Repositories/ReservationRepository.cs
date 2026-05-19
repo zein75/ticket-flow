@@ -31,4 +31,14 @@ internal sealed class ReservationRepository : Repository<Reservation>, IReservat
             .Where(reservation => reservation.Status == ReservationStatus.Active && reservation.ExpiresAtUtc <= utcNow)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyCollection<Reservation>> GetBySessionIdsWithSeatsAsync(
+        IReadOnlyCollection<Guid> sessionIds,
+        CancellationToken cancellationToken = default)
+    {
+        return await DbContext.Reservations
+            .Include(reservation => reservation.Seats)
+            .Where(reservation => sessionIds.Contains(reservation.SessionId))
+            .ToListAsync(cancellationToken);
+    }
 }

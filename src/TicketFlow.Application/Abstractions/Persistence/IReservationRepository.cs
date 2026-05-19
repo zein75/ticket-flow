@@ -9,4 +9,8 @@ public interface IReservationRepository : IRepository<Reservation>
     Task ReloadAsync(Reservation reservation, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyCollection<Reservation>> GetExpiredActiveAsync(DateTime utcNow, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyCollection<Reservation>> GetBySessionIdsWithSeatsAsync(
+        IReadOnlyCollection<Guid> sessionIds,
+        CancellationToken cancellationToken = default);
 }

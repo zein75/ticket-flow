@@ -79,6 +79,11 @@ public sealed class ExpiredReservationServiceTests
 
         public Task<IReadOnlyCollection<Reservation>> GetExpiredActiveAsync(DateTime utcNow, CancellationToken cancellationToken = default) =>
             Task.FromResult(_expiredReservations);
+
+        public Task<IReadOnlyCollection<Reservation>> GetBySessionIdsWithSeatsAsync(
+            IReadOnlyCollection<Guid> sessionIds,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyCollection<Reservation>>([]);
     }
 
     private sealed class FakeUnitOfWork : IUnitOfWork

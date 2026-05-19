@@ -18,4 +18,14 @@ internal sealed class SessionRepository : Repository<Session>, ISessionRepositor
             .OrderBy(session => session.StartsAtUtc)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyCollection<Session>> GetByEventIdsAsync(
+        IReadOnlyCollection<Guid> eventIds,
+        CancellationToken cancellationToken = default)
+    {
+        return await DbContext.Sessions
+            .Where(session => eventIds.Contains(session.EventId))
+            .OrderBy(session => session.StartsAtUtc)
+            .ToListAsync(cancellationToken);
+    }
 }
