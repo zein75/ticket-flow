@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using TicketFlow.Application.Features.Admin;
 using TicketFlow.Application.Features.Auth;
 using TicketFlow.Application.Features.Events;
 using TicketFlow.Application.Features.Halls;
@@ -18,6 +19,7 @@ public static class DependencyInjection
     {
         services.Configure<AuthOptions>(configuration.GetSection(AuthOptions.SectionName));
         services.Configure<ReservationOptions>(configuration.GetSection(ReservationOptions.SectionName));
+        services.AddScoped<IAdminService, AdminService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IEventManagementService, EventManagementService>();
         services.AddScoped<IHallManagementService, HallManagementService>();

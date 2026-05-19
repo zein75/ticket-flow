@@ -12,6 +12,14 @@ internal sealed class OrderRepository : Repository<Order>, IOrderRepository
     {
     }
 
+    public async Task<IReadOnlyCollection<Order>> GetAllWithTicketsAsync(CancellationToken cancellationToken = default)
+    {
+        return await DbContext.Orders
+            .Include(order => order.Tickets)
+            .OrderBy(order => order.Id)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyCollection<Order>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         return await DbContext.Orders
