@@ -5,10 +5,13 @@ using System.Security.Cryptography;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using TicketFlow.Application.Abstractions.Realtime;
+using TicketFlow.Application.Abstractions.Reservations;
 using TicketFlow.Domain.Entities;
 using TicketFlow.Domain.Enums;
 using TicketFlow.Domain.ValueObjects;
@@ -36,8 +39,25 @@ public sealed class ReservationPaymentsApiTests
         Assert.NotNull(payload);
         Assert.True(payload.Succeeded);
         Assert.Equal("Succeeded", payload.Status);
+        Assert.NotNull(payload.OrderId);
+        Assert.Single(payload.TicketIds);
         Assert.False(string.IsNullOrWhiteSpace(payload.ProviderPaymentId));
         Assert.Null(payload.FailureReason);
+        Assert.False(app.SeatLocks.IsLocked(app.SessionId, app.ActiveReservationId, app.ActiveSeatId));
+
+        using var scope = app.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<TicketFlowDbContext>();
+        var order = await dbContext.Orders.SingleAsync(order => order.ReservationId == app.ActiveReservationId);
+        var payment = await dbContext.Payments.SingleAsync(payment => payment.OrderId == order.Id);
+        var ticket = await dbContext.Tickets.SingleAsync(ticket => ticket.OrderId == order.Id);
+        var reservation = await dbContext.Reservations.SingleAsync(reservation => reservation.Id == app.ActiveReservationId);
+
+        Assert.Equal(payload.OrderId, order.Id);
+        Assert.Equal(OrderStatus.Paid, order.Status);
+        Assert.Equal(PaymentStatus.Succeeded, payment.Status);
+        Assert.Equal(TicketStatus.Active, ticket.Status);
+        Assert.Equal(app.ActiveSeatId, ticket.SeatId);
+        Assert.Equal(ReservationStatus.ConvertedToOrder, reservation.Status);
     }
 
     [Fact]
@@ -58,8 +78,15 @@ public sealed class ReservationPaymentsApiTests
         Assert.NotNull(payload);
         Assert.False(payload.Succeeded);
         Assert.Equal("Failed", payload.Status);
+        Assert.Null(payload.OrderId);
+        Assert.Empty(payload.TicketIds);
         Assert.Null(payload.ProviderPaymentId);
         Assert.False(string.IsNullOrWhiteSpace(payload.FailureReason));
+
+        using var scope = app.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<TicketFlowDbContext>();
+        Assert.False(await dbContext.Orders.AnyAsync());
+        Assert.True(app.SeatLocks.IsLocked(app.SessionId, app.ActiveReservationId, app.ActiveSeatId));
     }
 
     [Fact]
@@ -96,10 +123,12 @@ public sealed class ReservationPaymentsApiTests
 
     private sealed record PaymentPayload(
         Guid ReservationId,
+        Guid? OrderId,
         bool Succeeded,
         string Status,
         string? ProviderPaymentId,
-        string? FailureReason);
+        string? FailureReason,
+        IReadOnlyCollection<Guid> TicketIds);
 
     private sealed record AuthPayload(
         Guid UserId,
@@ -113,6 +142,8 @@ public sealed class ReservationPaymentsApiTests
     private sealed class ReservationPaymentsApiFactory : WebApplicationFactory<Program>
     {
         private readonly string _databaseName = $"ticketflow-payment-tests-{Guid.NewGuid()}";
+
+        public FakeSeatLockStore SeatLocks { get; } = new();
 
         public Guid UserId { get; } = Guid.NewGuid();
 
@@ -130,6 +161,8 @@ public sealed class ReservationPaymentsApiTests
 
         public Guid ExpiredReservationId { get; } = Guid.NewGuid();
 
+        public Guid ActiveSeatId { get; private set; }
+
         public async Task SeedAsync()
         {
             using var scope = Services.CreateScope();
@@ -144,6 +177,7 @@ public sealed class ReservationPaymentsApiTests
 
             var hall = new Hall(HallId, "Main hall", 1, 2);
             var seats = hall.Seats.OrderBy(seat => seat.Number).ToArray();
+            ActiveSeatId = seats[0].Id;
             dbContext.Halls.Add(hall);
 
             var ticketEvent = new Event(EventId, "Published event", "Visible publicly", OrganizerId);
@@ -174,6 +208,11 @@ public sealed class ReservationPaymentsApiTests
                     [seats[1].Id]));
 
             await dbContext.SaveChangesAsync();
+            await SeatLocks.TryLockSeatsAsync(
+                SessionId,
+                ActiveReservationId,
+                [ActiveSeatId],
+                TimeSpan.FromMinutes(10));
         }
 
         public async Task AuthorizeAsync(HttpClient client, string email)
@@ -206,7 +245,13 @@ public sealed class ReservationPaymentsApiTests
                 services.AddDbContext<TicketFlowDbContext>(options =>
                 {
                     options.UseInMemoryDatabase(_databaseName);
+                    options.ConfigureWarnings(warnings => warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning));
                 });
+
+                services.RemoveAll<ISeatLockStore>();
+                services.RemoveAll<ISeatStatusNotifier>();
+                services.AddSingleton<ISeatLockStore>(SeatLocks);
+                services.AddSingleton<ISeatStatusNotifier, NoOpSeatStatusNotifier>();
             });
         }
 
@@ -222,5 +267,66 @@ public sealed class ReservationPaymentsApiTests
                 Convert.ToBase64String(salt),
                 Convert.ToBase64String(key));
         }
+    }
+
+    private sealed class FakeSeatLockStore : ISeatLockStore
+    {
+        private readonly HashSet<(Guid SessionId, Guid ReservationId, Guid SeatId)> _locks = [];
+
+        public Task<bool> TryLockSeatsAsync(
+            Guid sessionId,
+            Guid reservationId,
+            IReadOnlyCollection<Guid> seatIds,
+            TimeSpan ttl,
+            CancellationToken cancellationToken = default)
+        {
+            foreach (var seatId in seatIds)
+            {
+                _locks.Add((sessionId, reservationId, seatId));
+            }
+
+            return Task.FromResult(true);
+        }
+
+        public Task ReleaseSeatsAsync(
+            Guid sessionId,
+            Guid reservationId,
+            IReadOnlyCollection<Guid> seatIds,
+            CancellationToken cancellationToken = default)
+        {
+            foreach (var seatId in seatIds)
+            {
+                _locks.Remove((sessionId, reservationId, seatId));
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public bool IsLocked(Guid sessionId, Guid reservationId, Guid seatId) =>
+            _locks.Contains((sessionId, reservationId, seatId));
+    }
+
+    private sealed class NoOpSeatStatusNotifier : ISeatStatusNotifier
+    {
+        public Task SeatsReservedAsync(
+            Guid sessionId,
+            Guid reservationId,
+            IReadOnlyCollection<Guid> seatIds,
+            CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public Task SeatsReleasedAsync(
+            Guid sessionId,
+            Guid reservationId,
+            IReadOnlyCollection<Guid> seatIds,
+            CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public Task SeatsSoldAsync(
+            Guid sessionId,
+            Guid orderId,
+            IReadOnlyCollection<Guid> seatIds,
+            CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 }

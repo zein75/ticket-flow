@@ -19,6 +19,11 @@ internal sealed class ReservationRepository : Repository<Reservation>, IReservat
             .FirstOrDefaultAsync(reservation => reservation.Id == id, cancellationToken);
     }
 
+    public Task ReloadAsync(Reservation reservation, CancellationToken cancellationToken = default)
+    {
+        return DbContext.Entry(reservation).ReloadAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyCollection<Reservation>> GetExpiredActiveAsync(DateTime utcNow, CancellationToken cancellationToken = default)
     {
         return await DbContext.Reservations

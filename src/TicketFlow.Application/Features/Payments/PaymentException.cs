@@ -19,6 +19,9 @@ public sealed class PaymentException : Exception
     public static PaymentException ReservationUnavailable() =>
         new("reservation_unavailable", "Only active non-expired reservations can be paid.");
 
+    public static PaymentException SeatsUnavailable() =>
+        new("seats_unavailable", "One or more reserved seats are no longer available.");
+
     public static PaymentException Validation(string message) =>
         new("payment_validation_failed", message);
 }

@@ -52,10 +52,12 @@ public sealed class ReservationPaymentsController : ControllerBase
     {
         return new PaymentResponse(
             result.ReservationId,
+            result.OrderId,
             result.Succeeded,
             result.Status,
             result.ProviderPaymentId,
-            result.FailureReason);
+            result.FailureReason,
+            result.TicketIds);
     }
 
     private ObjectResult ToProblemResult(PaymentException exception)
@@ -65,6 +67,7 @@ public sealed class ReservationPaymentsController : ControllerBase
             "reservation_not_found" => StatusCodes.Status404NotFound,
             "reservation_access_denied" => StatusCodes.Status403Forbidden,
             "reservation_unavailable" => StatusCodes.Status409Conflict,
+            "seats_unavailable" => StatusCodes.Status409Conflict,
             _ => StatusCodes.Status400BadRequest
         };
 

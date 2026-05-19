@@ -51,6 +51,7 @@ public static class DependencyInjection
         services.AddScoped<ISeatStatusRepository, SeatStatusRepository>();
         services.AddScoped<IReservationRepository, ReservationRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
