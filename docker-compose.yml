@@ -64,6 +64,7 @@ services:
       ConnectionStrings__Redis: redis:6379
       Auth__AccessTokenMinutes: ${AUTH_ACCESS_TOKEN_MINUTES:-15}
       Auth__RefreshTokenDays: ${AUTH_REFRESH_TOKEN_DAYS:-30}
+      ExpiredReservations__IntervalSeconds: ${EXPIRED_RESERVATIONS_INTERVAL_SECONDS:-30}
       Jwt__Issuer: ${JWT_ISSUER:-TicketFlow}
       Jwt__Audience: ${JWT_AUDIENCE:-TicketFlow.Api}
       Jwt__SigningKey: ${JWT_SIGNING_KEY:?JWT_SIGNING_KEY is required}

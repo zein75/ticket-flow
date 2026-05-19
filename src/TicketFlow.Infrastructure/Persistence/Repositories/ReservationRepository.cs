@@ -27,6 +27,7 @@ internal sealed class ReservationRepository : Repository<Reservation>, IReservat
     public async Task<IReadOnlyCollection<Reservation>> GetExpiredActiveAsync(DateTime utcNow, CancellationToken cancellationToken = default)
     {
         return await DbContext.Reservations
+            .Include(reservation => reservation.Seats)
             .Where(reservation => reservation.Status == ReservationStatus.Active && reservation.ExpiresAtUtc <= utcNow)
             .ToListAsync(cancellationToken);
     }

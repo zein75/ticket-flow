@@ -21,6 +21,10 @@ builder.Services.AddSignalR();
 builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<ISeatStatusNotifier, SignalRSeatStatusNotifier>();
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddHostedService<RedisSeatStatusSubscriber>();
+}
 
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
     ?? throw new InvalidOperationException("JWT options are not configured.");

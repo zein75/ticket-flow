@@ -7,6 +7,7 @@ using TicketFlow.Application.Abstractions.Common;
 using TicketFlow.Application.Abstractions.Payments;
 using TicketFlow.Application.Abstractions.Persistence;
 using TicketFlow.Application.Abstractions.QrCodes;
+using TicketFlow.Application.Abstractions.Realtime;
 using TicketFlow.Application.Abstractions.Reservations;
 using TicketFlow.Infrastructure.Auth;
 using TicketFlow.Infrastructure.Common;
@@ -47,6 +48,7 @@ public static class DependencyInjection
         services.AddSingleton<IRefreshTokenGenerator, RefreshTokenGenerator>();
         services.AddSingleton<ITokenService, JwtTokenService>();
         services.AddSingleton<ISeatLockStore, RedisSeatLockStore>();
+        services.AddSingleton<ISeatStatusNotifier, RedisSeatStatusNotifier>();
         services.AddSingleton<IPaymentProvider, MockPaymentProvider>();
         services.AddSingleton<IQrCodePayloadProtector, HmacQrCodePayloadProtector>();
         services.AddSingleton<IQrCodeImageGenerator, QrCodeImageGenerator>();
