@@ -6,12 +6,14 @@ using TicketFlow.Application.Abstractions.Auth;
 using TicketFlow.Application.Abstractions.Common;
 using TicketFlow.Application.Abstractions.Payments;
 using TicketFlow.Application.Abstractions.Persistence;
+using TicketFlow.Application.Abstractions.QrCodes;
 using TicketFlow.Application.Abstractions.Reservations;
 using TicketFlow.Infrastructure.Auth;
 using TicketFlow.Infrastructure.Common;
 using TicketFlow.Infrastructure.Persistence;
 using TicketFlow.Infrastructure.Persistence.Repositories;
 using TicketFlow.Infrastructure.Payments;
+using TicketFlow.Infrastructure.QrCodes;
 using TicketFlow.Infrastructure.Redis;
 
 namespace TicketFlow.Infrastructure;
@@ -34,6 +36,10 @@ public static class DependencyInjection
         services.AddOptions<JwtOptions>()
             .Bind(configuration.GetSection(JwtOptions.SectionName))
             .ValidateOnStart();
+        services.AddOptions<QrCodeOptions>()
+            .Bind(configuration.GetSection(QrCodeOptions.SectionName))
+            .Validate(options => !string.IsNullOrWhiteSpace(options.SigningKey) && options.SigningKey.Length >= 32, "QR code signing key must contain at least 32 characters.")
+            .ValidateOnStart();
         services.AddSingleton<Microsoft.Extensions.Options.IValidateOptions<JwtOptions>, JwtOptionsValidator>();
         services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
         services.AddSingleton<IClock, SystemClock>();
@@ -42,6 +48,8 @@ public static class DependencyInjection
         services.AddSingleton<ITokenService, JwtTokenService>();
         services.AddSingleton<ISeatLockStore, RedisSeatLockStore>();
         services.AddSingleton<IPaymentProvider, MockPaymentProvider>();
+        services.AddSingleton<IQrCodePayloadProtector, HmacQrCodePayloadProtector>();
+        services.AddSingleton<IQrCodeImageGenerator, QrCodeImageGenerator>();
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
@@ -52,6 +60,7 @@ public static class DependencyInjection
         services.AddScoped<IReservationRepository, ReservationRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
+        services.AddScoped<ITicketRepository, TicketRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;

@@ -6,6 +6,7 @@ using TicketFlow.Application.Features.Halls;
 using TicketFlow.Application.Features.Payments;
 using TicketFlow.Application.Features.Reservations;
 using TicketFlow.Application.Features.SeatMaps;
+using TicketFlow.Application.Features.Tickets;
 
 namespace TicketFlow.Application;
 
@@ -21,6 +22,7 @@ public static class DependencyInjection
         services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<IReservationService, ReservationService>();
         services.AddScoped<ISeatMapService, SeatMapService>();
+        services.AddScoped<ITicketService, TicketService>();
 
         return services;
     }

@@ -7,6 +7,7 @@ public sealed class Ticket : Entity
 {
     private Ticket()
     {
+        Order = null!;
         QrCodePayload = string.Empty;
     }
 
@@ -34,6 +35,7 @@ public sealed class Ticket : Entity
         }
 
         OrderId = orderId;
+        Order = null!;
         SessionId = sessionId;
         SeatId = seatId;
         QrCodePayload = qrCodePayload;
@@ -41,6 +43,8 @@ public sealed class Ticket : Entity
     }
 
     public Guid OrderId { get; }
+
+    public Order Order { get; private set; }
 
     public Guid SessionId { get; }
 

@@ -1,6 +1,7 @@
 using TicketFlow.Application.Abstractions.Common;
 using TicketFlow.Application.Abstractions.Payments;
 using TicketFlow.Application.Abstractions.Persistence;
+using TicketFlow.Application.Abstractions.QrCodes;
 using TicketFlow.Application.Abstractions.Realtime;
 using TicketFlow.Application.Abstractions.Reservations;
 using TicketFlow.Domain.Entities;
@@ -18,6 +19,7 @@ public sealed class PaymentService : IPaymentService
     private readonly ISeatLockStore _seatLocks;
     private readonly ISeatStatusNotifier _seatStatusNotifier;
     private readonly IPaymentProvider _paymentProvider;
+    private readonly IQrCodePayloadProtector _qrCodePayloads;
     private readonly IClock _clock;
 
     public PaymentService(
@@ -29,6 +31,7 @@ public sealed class PaymentService : IPaymentService
         ISeatLockStore seatLocks,
         ISeatStatusNotifier seatStatusNotifier,
         IPaymentProvider paymentProvider,
+        IQrCodePayloadProtector qrCodePayloads,
         IClock clock)
     {
         _reservations = reservations;
@@ -39,6 +42,7 @@ public sealed class PaymentService : IPaymentService
         _seatLocks = seatLocks;
         _seatStatusNotifier = seatStatusNotifier;
         _paymentProvider = paymentProvider;
+        _qrCodePayloads = qrCodePayloads;
         _clock = clock;
     }
 
@@ -116,7 +120,7 @@ public sealed class PaymentService : IPaymentService
                             order.Id,
                             reservation.SessionId,
                             seatId,
-                            CreateTicketPayload(ticketId, order.Id));
+                            _qrCodePayloads.CreatePayload(ticketId, order.Id));
 
                         order.AddTicket(ticket);
                         createdTicketIds.Add(ticketId);
@@ -149,6 +153,4 @@ public sealed class PaymentService : IPaymentService
             ticketIds);
     }
 
-    private static string CreateTicketPayload(Guid ticketId, Guid orderId) =>
-        $"ticket:{ticketId:N};order:{orderId:N}";
 }

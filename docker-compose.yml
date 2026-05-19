@@ -43,6 +43,7 @@ services:
       Jwt__Issuer: ${JWT_ISSUER:-TicketFlow}
       Jwt__Audience: ${JWT_AUDIENCE:-TicketFlow.Api}
       Jwt__SigningKey: ${JWT_SIGNING_KEY:?JWT_SIGNING_KEY is required}
+      QrCodes__SigningKey: ${QR_CODE_SIGNING_KEY:?QR_CODE_SIGNING_KEY is required}
     ports:
       - "${API_HTTP_PORT:-8080}:8080"
     depends_on:
@@ -66,6 +67,7 @@ services:
       Jwt__Issuer: ${JWT_ISSUER:-TicketFlow}
       Jwt__Audience: ${JWT_AUDIENCE:-TicketFlow.Api}
       Jwt__SigningKey: ${JWT_SIGNING_KEY:?JWT_SIGNING_KEY is required}
+      QrCodes__SigningKey: ${QR_CODE_SIGNING_KEY:?QR_CODE_SIGNING_KEY is required}
     depends_on:
       postgres:
         condition: service_healthy

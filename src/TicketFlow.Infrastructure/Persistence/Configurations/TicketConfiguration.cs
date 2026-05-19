@@ -16,7 +16,7 @@ internal sealed class TicketConfiguration : IEntityTypeConfiguration<Ticket>
         builder.HasIndex(ticket => new { ticket.SessionId, ticket.SeatId })
             .IsUnique();
 
-        builder.HasOne<Order>()
+        builder.HasOne(ticket => ticket.Order)
             .WithMany(order => order.Tickets)
             .HasForeignKey(ticket => ticket.OrderId)
             .OnDelete(DeleteBehavior.Cascade);
