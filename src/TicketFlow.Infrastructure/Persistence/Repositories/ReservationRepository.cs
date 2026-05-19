@@ -12,6 +12,13 @@ internal sealed class ReservationRepository : Repository<Reservation>, IReservat
     {
     }
 
+    public Task<Reservation?> GetByIdWithSeatsAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return DbContext.Reservations
+            .Include(reservation => reservation.Seats)
+            .FirstOrDefaultAsync(reservation => reservation.Id == id, cancellationToken);
+    }
+
     public async Task<IReadOnlyCollection<Reservation>> GetExpiredActiveAsync(DateTime utcNow, CancellationToken cancellationToken = default)
     {
         return await DbContext.Reservations

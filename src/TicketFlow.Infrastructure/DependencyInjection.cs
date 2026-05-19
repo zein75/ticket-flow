@@ -4,12 +4,14 @@ using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
 using TicketFlow.Application.Abstractions.Auth;
 using TicketFlow.Application.Abstractions.Common;
+using TicketFlow.Application.Abstractions.Payments;
 using TicketFlow.Application.Abstractions.Persistence;
 using TicketFlow.Application.Abstractions.Reservations;
 using TicketFlow.Infrastructure.Auth;
 using TicketFlow.Infrastructure.Common;
 using TicketFlow.Infrastructure.Persistence;
 using TicketFlow.Infrastructure.Persistence.Repositories;
+using TicketFlow.Infrastructure.Payments;
 using TicketFlow.Infrastructure.Redis;
 
 namespace TicketFlow.Infrastructure;
@@ -39,6 +41,7 @@ public static class DependencyInjection
         services.AddSingleton<IRefreshTokenGenerator, RefreshTokenGenerator>();
         services.AddSingleton<ITokenService, JwtTokenService>();
         services.AddSingleton<ISeatLockStore, RedisSeatLockStore>();
+        services.AddSingleton<IPaymentProvider, MockPaymentProvider>();
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();

@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using TicketFlow.Application.Features.Auth;
 using TicketFlow.Application.Features.Events;
 using TicketFlow.Application.Features.Halls;
+using TicketFlow.Application.Features.Payments;
 using TicketFlow.Application.Features.Reservations;
 using TicketFlow.Application.Features.SeatMaps;
 
@@ -17,6 +18,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IEventManagementService, EventManagementService>();
         services.AddScoped<IHallManagementService, HallManagementService>();
+        services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<IReservationService, ReservationService>();
         services.AddScoped<ISeatMapService, SeatMapService>();
 
