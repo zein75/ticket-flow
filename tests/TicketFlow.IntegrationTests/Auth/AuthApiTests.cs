@@ -64,6 +64,32 @@ public sealed class AuthApiTests
     }
 
     [Fact]
+    public async Task HealthLive_ShouldReturnHealthy()
+    {
+        await using var app = new AuthApiFactory();
+        var client = app.CreateClient();
+
+        var response = await client.GetAsync("/health/live");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Response_ShouldEchoCorrelationId()
+    {
+        await using var app = new AuthApiFactory();
+        var client = app.CreateClient();
+        var request = new HttpRequestMessage(HttpMethod.Get, "/health/live");
+        request.Headers.Add("X-Correlation-ID", "test-correlation-id");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(response.Headers.TryGetValues("X-Correlation-ID", out var values));
+        Assert.Equal("test-correlation-id", Assert.Single(values));
+    }
+
+    [Fact]
     public async Task Register_ShouldRejectWhitespacePassword()
     {
         await using var app = new AuthApiFactory();

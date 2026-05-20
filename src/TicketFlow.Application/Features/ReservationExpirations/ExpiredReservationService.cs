@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using TicketFlow.Application.Abstractions.Common;
 using TicketFlow.Application.Abstractions.Persistence;
 using TicketFlow.Application.Abstractions.Realtime;
@@ -10,17 +11,20 @@ public sealed class ExpiredReservationService : IExpiredReservationService
     private readonly IUnitOfWork _unitOfWork;
     private readonly ISeatStatusNotifier _seatStatusNotifier;
     private readonly IClock _clock;
+    private readonly ILogger<ExpiredReservationService> _logger;
 
     public ExpiredReservationService(
         IReservationRepository reservations,
         IUnitOfWork unitOfWork,
         ISeatStatusNotifier seatStatusNotifier,
-        IClock clock)
+        IClock clock,
+        ILogger<ExpiredReservationService> logger)
     {
         _reservations = reservations;
         _unitOfWork = unitOfWork;
         _seatStatusNotifier = seatStatusNotifier;
         _clock = clock;
+        _logger = logger;
     }
 
     public async Task<ExpireReservationsResult> ExpireAsync(CancellationToken cancellationToken = default)
@@ -46,6 +50,11 @@ public sealed class ExpiredReservationService : IExpiredReservationService
 
         foreach (var result in results)
         {
+            _logger.LogInformation(
+                "ReservationExpired ReservationId={ReservationId} SessionId={SessionId} SeatCount={SeatCount}",
+                result.ReservationId,
+                result.SessionId,
+                result.SeatIds.Count);
             await _seatStatusNotifier.SeatsReleasedAsync(
                 result.SessionId,
                 result.ReservationId,

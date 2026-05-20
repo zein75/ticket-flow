@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TicketFlow.Application.Abstractions.Common;
 using TicketFlow.Application.Abstractions.Persistence;
@@ -18,6 +19,7 @@ public sealed class ReservationService : IReservationService
     private readonly ISeatStatusNotifier _seatStatusNotifier;
     private readonly IClock _clock;
     private readonly ReservationOptions _options;
+    private readonly ILogger<ReservationService> _logger;
 
     public ReservationService(
         ISessionRepository sessions,
@@ -28,7 +30,8 @@ public sealed class ReservationService : IReservationService
         ISeatLockStore seatLocks,
         ISeatStatusNotifier seatStatusNotifier,
         IClock clock,
-        IOptions<ReservationOptions> options)
+        IOptions<ReservationOptions> options,
+        ILogger<ReservationService> logger)
     {
         _sessions = sessions;
         _halls = halls;
@@ -39,6 +42,7 @@ public sealed class ReservationService : IReservationService
         _seatStatusNotifier = seatStatusNotifier;
         _clock = clock;
         _options = options.Value;
+        _logger = logger;
     }
 
     public async Task<ReservationResult> CreateAsync(CreateReservationCommand command, CancellationToken cancellationToken = default)
@@ -85,6 +89,13 @@ public sealed class ReservationService : IReservationService
 
             _reservations.Add(reservation);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation(
+                "ReservationCreated ReservationId={ReservationId} UserId={UserId} SessionId={SessionId} SeatCount={SeatCount} ExpiresAtUtc={ExpiresAtUtc}",
+                reservation.Id,
+                reservation.UserId,
+                reservation.SessionId,
+                seatIds.Length,
+                reservation.ExpiresAtUtc);
             await _seatStatusNotifier.SeatsReservedAsync(session.Id, reservation.Id, seatIds, cancellationToken);
 
             return ToResult(reservation);

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using TicketFlow.Application.Abstractions.Common;
 using TicketFlow.Application.Abstractions.Payments;
 using TicketFlow.Application.Abstractions.Persistence;
@@ -21,6 +22,7 @@ public sealed class PaymentService : IPaymentService
     private readonly IPaymentProvider _paymentProvider;
     private readonly IQrCodePayloadProtector _qrCodePayloads;
     private readonly IClock _clock;
+    private readonly ILogger<PaymentService> _logger;
 
     public PaymentService(
         IReservationRepository reservations,
@@ -32,7 +34,8 @@ public sealed class PaymentService : IPaymentService
         ISeatStatusNotifier seatStatusNotifier,
         IPaymentProvider paymentProvider,
         IQrCodePayloadProtector qrCodePayloads,
-        IClock clock)
+        IClock clock,
+        ILogger<PaymentService> logger)
     {
         _reservations = reservations;
         _sessions = sessions;
@@ -44,6 +47,7 @@ public sealed class PaymentService : IPaymentService
         _paymentProvider = paymentProvider;
         _qrCodePayloads = qrCodePayloads;
         _clock = clock;
+        _logger = logger;
     }
 
     public async Task<PaymentResult> PayReservationAsync(PayReservationCommand command, CancellationToken cancellationToken = default)
@@ -141,6 +145,23 @@ public sealed class PaymentService : IPaymentService
         }
 
         await _seatLocks.ReleaseSeatsAsync(reservation.SessionId, reservation.Id, seatIds, cancellationToken);
+        _logger.LogInformation(
+            "PaymentSucceeded ReservationId={ReservationId} OrderId={OrderId} ProviderPaymentId={ProviderPaymentId} Amount={Amount} Currency={Currency}",
+            reservation.Id,
+            orderId,
+            paymentResult.ProviderPaymentId,
+            totalAmount.Amount,
+            totalAmount.Currency);
+
+        foreach (var ticketId in ticketIds)
+        {
+            _logger.LogInformation(
+                "TicketGenerated TicketId={TicketId} OrderId={OrderId} SessionId={SessionId}",
+                ticketId,
+                orderId,
+                reservation.SessionId);
+        }
+
         await _seatStatusNotifier.SeatsSoldAsync(reservation.SessionId, orderId, seatIds, cancellationToken);
 
         return new PaymentResult(

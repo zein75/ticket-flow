@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using TicketFlow.Application.Abstractions.Common;
 using TicketFlow.Application.Abstractions.Persistence;
 using TicketFlow.Application.Abstractions.Realtime;
@@ -22,7 +23,12 @@ public sealed class ExpiredReservationServiceTests
         var repository = new FakeReservationRepository([expiredReservation]);
         var unitOfWork = new FakeUnitOfWork();
         var notifier = new FakeSeatStatusNotifier();
-        var service = new ExpiredReservationService(repository, unitOfWork, notifier, new FakeClock(now));
+        var service = new ExpiredReservationService(
+            repository,
+            unitOfWork,
+            notifier,
+            new FakeClock(now),
+            NullLogger<ExpiredReservationService>.Instance);
 
         var result = await service.ExpireAsync();
 
@@ -42,7 +48,12 @@ public sealed class ExpiredReservationServiceTests
         var repository = new FakeReservationRepository([]);
         var unitOfWork = new FakeUnitOfWork();
         var notifier = new FakeSeatStatusNotifier();
-        var service = new ExpiredReservationService(repository, unitOfWork, notifier, new FakeClock(now));
+        var service = new ExpiredReservationService(
+            repository,
+            unitOfWork,
+            notifier,
+            new FakeClock(now),
+            NullLogger<ExpiredReservationService>.Instance);
 
         var result = await service.ExpireAsync();
 

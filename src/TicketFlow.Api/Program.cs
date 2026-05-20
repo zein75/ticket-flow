@@ -2,9 +2,13 @@ using System.Security.Claims;
 using System.Text;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
+using Serilog.Events;
 using TicketFlow.Api.Auth;
+using TicketFlow.Api.HealthChecks;
 using TicketFlow.Api.Hubs;
 using TicketFlow.Api.Middleware;
 using TicketFlow.Api.Realtime;
@@ -16,6 +20,15 @@ using TicketFlow.Infrastructure;
 using TicketFlow.Infrastructure.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseSerilog((context, services, loggerConfiguration) =>
+{
+    loggerConfiguration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .Enrich.WithProperty("Application", "TicketFlow.Api")
+        .WriteTo.Console();
+});
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -41,6 +54,9 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
+builder.Services.AddHealthChecks()
+    .AddCheck<PostgresHealthCheck>("postgres", tags: ["ready"])
+    .AddCheck<RedisHealthCheck>("redis", tags: ["ready"]);
 builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<ISeatStatusNotifier, SignalRSeatStatusNotifier>();
@@ -88,12 +104,35 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseSerilogRequestLogging(options =>
+{
+    options.GetLevel = (httpContext, elapsed, exception) =>
+        exception is not null || httpContext.Response.StatusCode >= 500
+            ? LogEventLevel.Error
+            : LogEventLevel.Information;
+    options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+    {
+        diagnosticContext.Set("CorrelationId", httpContext.TraceIdentifier);
+        diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value ?? string.Empty);
+        diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
+    };
+});
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<SeatHub>(ApiRoutes.V1 + "/hubs/seats");
+app.MapHealthChecks("/health");
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = _ => false
+});
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = healthCheck => healthCheck.Tags.Contains("ready")
+});
 
 app.Run();
 
